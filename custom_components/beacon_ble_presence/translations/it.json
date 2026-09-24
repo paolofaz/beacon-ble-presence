@@ -1,0 +1,40 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Aggiungi iBeacon",
+        "description": "Traccia un iBeacon tramite UUID, Major e Minor usando il Bluetooth di Home Assistant.",
+        "data": {
+          "name": "Nome",
+          "uuid": "UUID",
+          "major": "Major",
+          "minor": "Minor",
+          "presence_timeout": "Timeout presenza (secondi)"
+        }
+      }
+    },
+    "error": {
+      "invalid_uuid": "UUID non valido"
+    },
+    "abort": {
+      "already_configured": "Questo beacon è già configurato"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni Beacon BLE Presence",
+        "data": {
+          "presence_timeout": "Timeout presenza (secondi)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "presence": {
+        "name": "Presente"
+      }
+    }
+  }
+}
