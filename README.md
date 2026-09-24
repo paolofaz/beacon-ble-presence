@@ -131,9 +131,12 @@ Beacon BLE Presence deliberately focuses on a small, deterministic presence prob
 
 - Home Assistant 2026.3 or newer for the supported local custom-integration brand assets.
 - Home Assistant Bluetooth must be available through a local adapter and/or supported Bluetooth proxies.
+# 🍺 Support the Project
 
-## Issues
+If you found this project useful and want to support my work, you can offer me a beer:
 
-Please report reproducible problems at:
+[![Buy Me a Beer](https://img.shields.io/badge/Buy%20Me%20a%20Beer-0070ba?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/PaoloFazari)
 
-`https://github.com/paolofaz/beacon-ble-presence/issues`
+
+## Contributions
+Contributions are welcome
