@@ -66,7 +66,7 @@ class BeaconBlePresenceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_NAME): vol.All(
                     str, vol.Strip, vol.Length(min=1, max=64)
                 ),
-                vol.Required(CONF_UUID): vol.All(str, vol.Strip,
+                vol.Required(CONF_UUID): vol.All(str, vol.Strip),
                 vol.Required(CONF_MAJOR, default=1): vol.All(
                     vol.Coerce(int), vol.Range(min=0, max=65535)
                 ),
