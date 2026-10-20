@@ -27,6 +27,14 @@ from .parser import parse_ibeacon
 
 _LOGGER = logging.getLogger(__name__)
 
+# Bluetooth addresses may rotate. Bound memory and discard stale candidates.
+MAX_KNOWN_ADDRESSES = 128
+MIN_ADDRESS_RETENTION_SECONDS = 3600
+
+# Publish diagnostic updates at most once per minute during continued presence.
+# Presence transitions are always published immediately.
+DIAGNOSTIC_NOTIFY_INTERVAL_SECONDS = 60
+
 
 class BeaconPresenceCoordinator:
     """Track one configured iBeacon through Home Assistant Bluetooth."""
@@ -47,10 +55,12 @@ class BeaconPresenceCoordinator:
         self.last_seen: datetime | None = None
         self.last_source: str | None = None
 
-        self._known_addresses: set[str] = set()
+        # MAC -> time of the last matching cached advertisement (monotonic).
+        self._known_addresses: dict[str, float] = {}
         self._listeners: set[Callable[[], None]] = set()
         self._started_monotonic = time.monotonic()
         self._last_service_monotonic: float | None = None
+        self._last_notified_monotonic: float | None = None
 
     async def async_start(self) -> None:
         """Start passive Bluetooth tracking and periodic cache checks."""
@@ -92,8 +102,35 @@ class BeaconPresenceCoordinator:
 
     @callback
     def _async_notify_listeners(self) -> None:
+        self._last_notified_monotonic = time.monotonic()
         for listener in tuple(self._listeners):
             listener()
+
+    @callback
+    def _remember_address(self, address: str, seen_mono: float) -> None:
+        """Remember a matching rotating address, discarding stale candidates."""
+        now = time.monotonic()
+        ttl = max(MIN_ADDRESS_RETENTION_SECONDS, self.timeout * 2)
+        if now - seen_mono > ttl:
+            return
+        self._known_addresses[address] = max(
+            self._known_addresses.get(address, seen_mono), seen_mono
+        )
+        self._prune_addresses(now)
+
+    @callback
+    def _prune_addresses(self, now: float) -> None:
+        """Bound memory and work even if a beacon changes MAC addresses."""
+        ttl = max(MIN_ADDRESS_RETENTION_SECONDS, self.timeout * 2)
+        for address, seen_mono in tuple(self._known_addresses.items()):
+            if now - seen_mono > ttl:
+                del self._known_addresses[address]
+        excess = len(self._known_addresses) - MAX_KNOWN_ADDRESSES
+        if excess > 0:
+            for address in sorted(
+                self._known_addresses, key=self._known_addresses.__getitem__
+            )[:excess]:
+                del self._known_addresses[address]
 
     @callback
     def _matches(self, service_info: bluetooth.BluetoothServiceInfoBleak) -> bool:
@@ -116,7 +153,7 @@ class BeaconPresenceCoordinator:
         if not self._matches(service_info):
             return
 
-        self._known_addresses.add(service_info.address)
+        self._remember_address(service_info.address, service_info.time)
         self._async_consider_service_info(service_info)
 
     @callback
@@ -126,6 +163,7 @@ class BeaconPresenceCoordinator:
 
     @callback
     def _async_refresh_from_bluetooth_cache(self) -> None:
+        self._prune_addresses(time.monotonic())
         freshest: bluetooth.BluetoothServiceInfoBleak | None = None
 
         for address in tuple(self._known_addresses):
@@ -134,6 +172,7 @@ class BeaconPresenceCoordinator:
             )
             if service_info is None or not self._matches(service_info):
                 continue
+            self._remember_address(address, service_info.time)
             if freshest is None or service_info.time > freshest.time:
                 freshest = service_info
 
@@ -156,14 +195,15 @@ class BeaconPresenceCoordinator:
             return
 
         self._last_service_monotonic = seen_mono
-        age = max(0.0, time.monotonic() - seen_mono)
+        now = time.monotonic()
+        age = max(0.0, now - seen_mono)
         self.last_seen = dt_util.now() - timedelta(seconds=age)
         self.last_source = service_info.source
 
         # Startup safety: a replayed packet from before this integration started
         # may teach us the address, but it must not restore ON and create an
         # artificial ON->OFF / OFF->ON sequence after a Home Assistant restart.
-        if seen_mono < self._started_monotonic:
+        if seen_mono < self._started_monotonic or age >= self.timeout:
             return
 
         changed = self.present is not True
@@ -176,7 +216,13 @@ class BeaconPresenceCoordinator:
                 self.minor,
                 self.last_source,
             )
-        self._async_notify_listeners()
+        last_notify = self._last_notified_monotonic
+        if (
+            changed
+            or last_notify is None
+            or now - last_notify >= DIAGNOSTIC_NOTIFY_INTERVAL_SECONDS
+        ):
+            self._async_notify_listeners()
 
     @callback
     def _async_apply_timeout(self) -> None:

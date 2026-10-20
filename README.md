@@ -4,6 +4,20 @@
 
 It uses Home Assistant's existing Bluetooth stack and Bluetooth proxies. It does **not** start its own BLE scanner and does **not** depend on the official iBeacon Tracker integration.
 
+## Why use this instead of the built-in iBeacon Tracker?
+
+Home Assistant already provides the official **iBeacon Tracker** integration, which automatically discovers iBeacons and creates device trackers and additional diagnostic sensors. That is a good choice for general iBeacon tracking.
+
+**Beacon BLE Presence** is a narrower alternative for selected beacons:
+
+- **Explicit identity:** Add exactly the UUID + Major + Minor that you want to monitor; other broadcasts create no entities here.
+- **One binary presence sensor per beacon:** A simple `on` / `off` entity suitable for automations, rather than automatic tracker discovery.
+- **Configurable presence timeout per device:** Set 10–3600 seconds, with a default of 180 seconds, directly in the UI.
+- **Conservative restart handling:** Cached packets from before Home Assistant restarts cannot create fake arrivals. An initial absence is established after the configured timeout.
+- **Minimal diagnostics:** Last-seen time and scanner details are included as attributes; there is no RSSI localization or distance estimation.
+
+This integration does not replace the official iBeacon Tracker for broad discovery. Both use the same public Home Assistant Bluetooth system.
+
 ## Features
 
 - One presence binary sensor per configured iBeacon.
@@ -74,6 +88,10 @@ Home Assistant Bluetooth callbacks intentionally suppress duplicate advertisemen
 
 This keeps `last_seen` current without starting a separate scanner.
 
+To avoid unbounded memory growth when MAC addresses rotate, the integration retains a maximum of **128 recent BLE addresses per beacon**. Addresses expire after an hour or twice the configured timeout, whichever is longer.
+
+The cache and presence timeout are still checked every **5 seconds**. During continuous presence, diagnostic state updates are published at most once every **60 seconds**, reducing unnecessary Recorder writes. **Present/absent transitions are always published immediately**, without waiting for that diagnostic interval.
+
 The binary sensor is:
 
 - **on** when a live matching advertisement has been observed recently;
@@ -126,6 +144,22 @@ Beacon BLE Presence deliberately focuses on a small, deterministic presence prob
 - room localization;
 - RSSI peak/history analysis;
 - its own Bluetooth scanning.
+
+## Security and privacy
+
+An iBeacon broadcasts its UUID, Major and Minor without cryptographic authentication. Other devices can imitate that identity. Do not use a beacon's presence as the only condition for unlocking doors or disarming security systems.
+
+## Upgrading an existing installation
+
+**Update the integration in place.** UUID, Major, Minor, entity `unique_id` and existing config entries remain unchanged; you do not need to re-enter your beacon identifiers. Back up Home Assistant before upgrading, and do not remove/recreate the configuration entries to update.
+
+## Quality checks
+
+Automated HACS and Hassfest validation runs on GitHub. An additional `tests/` suite covers payload parsing, rotating MAC expiration and bounds, passive callbacks, restart safety, timeout transitions and diagnostic throttling:
+
+```sh
+python -m unittest discover -s tests -v
+```
 
 ## Compatibility
 
