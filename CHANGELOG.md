@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.2.0 — Removed diagnostic sensor to preserve recorder from spam
+
 ## 1.1.0 — Memory bounds, lighter diagnostics and regression tests
 
 - Limit stored rotating BLE addresses to 128 recent candidates per configured beacon and expire stale addresses.
