@@ -31,10 +31,6 @@ _LOGGER = logging.getLogger(__name__)
 MAX_KNOWN_ADDRESSES = 128
 MIN_ADDRESS_RETENTION_SECONDS = 3600
 
-# Publish diagnostic updates at most once per minute during continued presence.
-# Presence transitions are always published immediately.
-DIAGNOSTIC_NOTIFY_INTERVAL_SECONDS = 60
-
 
 class BeaconPresenceCoordinator:
     """Track one configured iBeacon through Home Assistant Bluetooth."""
@@ -60,7 +56,6 @@ class BeaconPresenceCoordinator:
         self._listeners: set[Callable[[], None]] = set()
         self._started_monotonic = time.monotonic()
         self._last_service_monotonic: float | None = None
-        self._last_notified_monotonic: float | None = None
 
     async def async_start(self) -> None:
         """Start passive Bluetooth tracking and periodic cache checks."""
@@ -102,7 +97,6 @@ class BeaconPresenceCoordinator:
 
     @callback
     def _async_notify_listeners(self) -> None:
-        self._last_notified_monotonic = time.monotonic()
         for listener in tuple(self._listeners):
             listener()
 
@@ -216,12 +210,8 @@ class BeaconPresenceCoordinator:
                 self.minor,
                 self.last_source,
             )
-        last_notify = self._last_notified_monotonic
-        if (
-            changed
-            or last_notify is None
-            or now - last_notify >= DIAGNOSTIC_NOTIFY_INTERVAL_SECONDS
-        ):
+
+        if changed:
             self._async_notify_listeners()
 
     @callback
