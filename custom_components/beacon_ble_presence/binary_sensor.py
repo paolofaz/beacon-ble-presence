@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -57,19 +56,6 @@ class BeaconPresenceBinarySensor(BinarySensorEntity):
         """Return whether the beacon is present."""
         return self._coordinator.present
 
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Expose compact diagnostics useful for debugging."""
-        return {
-            "last_seen": self._coordinator.last_seen.isoformat()
-            if self._coordinator.last_seen
-            else None,
-            "last_scanner": self._coordinator.last_source,
-            "uuid": self._coordinator.uuid,
-            "major": self._coordinator.major,
-            "minor": self._coordinator.minor,
-            "presence_timeout": self._coordinator.timeout,
-        }
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to coordinator changes."""
