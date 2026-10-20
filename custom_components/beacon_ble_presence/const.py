@@ -20,4 +20,4 @@ IBEACON_PREFIX = bytes((0x02, 0x15))
 
 # Duplicate BLE advertisements are intentionally suppressed by HA callbacks.
 # Periodically inspect HA's central Bluetooth cache to refresh the real last_seen.
-REFRESH_INTERVAL_SECONDS = 5
+REFRESH_INTERVAL_SECONDS = 15
