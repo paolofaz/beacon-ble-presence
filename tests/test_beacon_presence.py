@@ -168,7 +168,7 @@ class BeaconCoordinatorTests(TestCase):
             c._async_bluetooth_event(advertisement("AA", 1002), None)
         self.assertTrue(c.present)
 
-    def test_immediate_presence_changes_but_throttled_diagnostics(self):
+    def test_only_presence_changes_trigger_updates(self):
         _, _, m, bt = load_modules()
         c, _ = make_coordinator(m, time_start=1000, timeout=180)
         updates = []
@@ -188,11 +188,11 @@ class BeaconCoordinatorTests(TestCase):
         with mock.patch.object(m.time, "monotonic", return_value=1066):
             bt.history["AA"] = advertisement("AA", 1066)
             c._async_refresh_from_bluetooth_cache()
-        self.assertEqual(updates, [True, True])
+        self.assertEqual(updates, [True])
 
         with mock.patch.object(m.time, "monotonic", return_value=1247):
             c._async_apply_timeout()
-        self.assertEqual(updates, [True, True, False])
+        self.assertEqual(updates, [True, False])
         self.assertFalse(c.present)
 
     def test_initial_absent_after_timeout(self):
