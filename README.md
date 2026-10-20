@@ -122,18 +122,6 @@ to: "off"
 
 rather than `unavailable -> on` or `unavailable -> off`.
 
-## Diagnostics
-
-The presence binary sensor exposes these attributes:
-
-- `last_seen`: timestamp of the newest matching BLE advertisement known to Home Assistant;
-- `last_scanner`: source identifier reported by Home Assistant Bluetooth;
-- `uuid`;
-- `major`;
-- `minor`;
-- `presence_timeout`.
-
-`last_scanner` is diagnostic only. It should **not** be treated as a reliable physical location of the beacon.
 
 ## Design scope
 
